@@ -8,11 +8,11 @@ Standard packs define the scenarios, rubrics, and scoring criteria used when you
 
 ## Available packs
 
-| Pack | ID | Intensities | Focus |
-|---|---|---|---|
-| SOC Triage | `soc_triage` | light, standard, aggressive, expert | Alert triage, incident response, threat detection |
-| Phishing Analysis | `phishing_analysis` | light, standard, aggressive | Email security, BEC, verdict accuracy |
-| Security Policy | `security_policy` | light, standard, aggressive | Policy interpretation, access control, exception handling |
+| Pack | ID | Light | Standard | Aggressive | Expert |
+|---|---|---|---|---|---|
+| SOC Triage | `soc_triage` | ✓ | ✓ | ✓ | coming |
+| Phishing Analysis | `phishing_analysis` | ✓ | coming | coming | — |
+| Security Policy | `security_policy` | ✓ | coming | coming | — |
 
 More packs are in progress. See [open issues](https://github.com/Censiq/standard-packs/issues?q=label%3Anew-pack) for what's being worked on.
 
@@ -48,7 +48,7 @@ packs/
     ├── light.yaml       # 5 foundational scenarios
     ├── standard.yaml    # 8 complex multi-signal incidents
     ├── aggressive.yaml  # 10 adversarial / social engineering
-    └── expert.yaml      # 6 agentic multi-step scenarios
+    └── expert.yaml      # 6 agentic multi-step scenarios (coming)
 ```
 
 Each intensity file contains scenarios with prompts, expected behaviors, critical failure triggers, and rubric weights. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full schema.
@@ -79,6 +79,20 @@ Every scenario is evaluated by an independent AI evaluator across five dimension
 | Compliance | 10% |
 
 A scenario passes when `overall_score >= 70` and no critical failure is triggered.
+
+---
+
+## Benchmark reference — GPT-4o on SOC Triage
+
+Run against an unmodified GPT-4o to establish a general-AI baseline:
+
+| Intensity | Grade | Score | Pass Rate | Critical Failures |
+|---|---|---|---|---|
+| Light | B | 75/100 | 80% | 0 |
+| Standard | C | 61/100 | 0% | 2 |
+| Aggressive | C | 62/100 | 30% | 2 |
+
+A general-purpose model handles foundational cases adequately but breaks down on multi-signal correlation and collapses under social engineering pressure. A purpose-built security AI should score B or higher across all intensities. Use these as the baseline to beat.
 
 ---
 
