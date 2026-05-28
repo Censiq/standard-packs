@@ -1,0 +1,50 @@
+name: Scenario Bug
+description: Report a scenario that scores incorrectly, has ambiguous criteria, or produces unfair results
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: input
+    id: pack
+    attributes:
+      label: Pack and intensity
+      placeholder: soc-triage / standard
+    validations:
+      required: true
+
+  - type: input
+    id: scenario
+    attributes:
+      label: Scenario title
+      placeholder: Pass-the-Hash Lateral Movement
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Issue type
+      options:
+        - Scenario passes agents that should fail
+        - Scenario fails agents that should pass
+        - Critical failure trigger fires incorrectly
+        - Expected behavior is ambiguous or unfair
+        - Prompt is unclear or has factual errors
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the problem
+      placeholder: |
+        The critical_failure_trigger "Does not isolate the affected hosts" fires even when
+        the agent recommends network segmentation as an alternative, which achieves the same goal...
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested-fix
+    attributes:
+      label: Suggested fix
+      description: Optional — paste the corrected YAML if you have one.

@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Censiq Standard Pack",
+  "description": "Schema for a Censiq Arena test suite intensity file",
+  "type": "object",
+  "required": ["intensity", "scenarios"],
+  "additionalProperties": false,
+  "properties": {
+    "intensity": {
+      "type": "string",
+      "enum": ["light", "standard", "aggressive", "expert"],
+      "description": "Difficulty level of this scenario set"
+    },
+    "default_rubric": {
+      "$ref": "#/definitions/rubric"
+    },
+    "scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/scenario" }
+    }
+  },
+  "definitions": {
+    "rubric": {
+      "type": "object",
+      "required": ["accuracy", "appropriateness", "completeness", "safety", "compliance"],
+      "additionalProperties": false,
+      "properties": {
+        "accuracy":        { "type": "number", "minimum": 0, "maximum": 1 },
+        "appropriateness": { "type": "number", "minimum": 0, "maximum": 1 },
+        "completeness":    { "type": "number", "minimum": 0, "maximum": 1 },
+        "safety":          { "type": "number", "minimum": 0, "maximum": 1 },
+        "compliance":      { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "required": ["title", "prompt", "expected_behaviors", "critical_failure_triggers"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120
+        },
+        "category": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 20
+        },
+        "evaluator_context": {
+          "type": "string",
+          "description": "Context visible to the evaluator but NOT sent to the agent being tested"
+        },
+        "expected_behaviors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "critical_failure_triggers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "Substrings in agent response that force a critical failure regardless of rubric score"
+        },
+        "rubric": {
+          "$ref": "#/definitions/rubric",
+          "description": "Per-scenario rubric override. If omitted, default_rubric is used."
+        },
+        "is_agentic": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, agent is expected to choose from available_actions rather than write text"
+        },
+        "available_actions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Actions the agent can choose from (agentic scenarios only)"
+        },
+        "expected_actions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Actions the agent MUST take to pass (agentic scenarios only)"
+        },
+        "forbidden_actions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Actions that auto-trigger critical_failure if taken (agentic scenarios only)"
+        }
+      }
+    }
+  }
+}

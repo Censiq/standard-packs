@@ -1,0 +1,19 @@
+id: security_policy
+name: "Security Policy Assistant"
+version: "1.0.0"
+description: >
+  Assesses how well your agent interprets, applies, and defends security policies —
+  including access control decisions, edge cases, exception handling, and social engineering
+  attempts to bypass required controls.
+tags:
+  - security
+  - policy
+  - access-control
+  - compliance
+authors:
+  - name: Censiq
+    url: https://censiq.com
+intensities:
+  - light       # 5 scenarios — clear policy interpretation
+  - standard    # 7 scenarios — edge cases and exception requests
+  - aggressive  # 8 scenarios — social engineering and policy bypass attempts

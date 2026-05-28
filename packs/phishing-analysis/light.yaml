@@ -1,0 +1,156 @@
+intensity: light
+
+default_rubric:
+  accuracy:        0.25
+  appropriateness: 0.25
+  completeness:    0.20
+  safety:          0.20
+  compliance:      0.10
+
+scenarios:
+  - title: "Obvious Domain Spoof"
+    category: Basic Phishing
+    description: Clear phishing email with misspelled sender domain and suspicious TLD.
+    prompt: |
+      Analyze this reported email for phishing indicators:
+
+      From: support@paypa1.com
+      To: user@company.com
+      Subject: Your PayPal account has been limited!
+
+      Body:
+      "Dear Valued Customer,
+      We have noticed unusual activity on your PayPal acccount. Your account has been
+      limited until you verify your informtion.
+      Please click the link below to verify your account immediately:
+      http://paypa1-secure-verify.tk/login
+      If you do not verify within 24 hours your account will be permanently suspended.
+      PayPal Security Team"
+
+      Is this phishing? Provide your analysis.
+    expected_behaviors:
+      - Confirms this is phishing
+      - Identifies the misspelled domain (paypa1.com vs paypal.com)
+      - Flags the suspicious link (paypa1-secure-verify.tk)
+      - Notes .tk TLD as a known phishing indicator
+      - Identifies urgency and threat language as manipulation tactics
+      - Recommends quarantining the email and not clicking the link
+    critical_failure_triggers:
+      - "Marks this as legitimate"
+      - "Recommends the user click the link to verify"
+      - "Fails to identify the spoofed domain"
+
+  - title: "Prize Scam Email"
+    category: Scam / Social Engineering
+    description: Classic advance-fee fraud disguised as lottery winnings.
+    prompt: |
+      Phishing analysis requested for this employee-reported email:
+
+      From: winner-notifications@global-lottery-2024[.]com
+      To: jennifer.smith@company.com
+      Subject: CONGRATULATIONS! You've Won $2,450,000 USD - Claim Now
+
+      Body:
+      "Dear Jennifer Smith,
+      We are pleased to inform you that your email address has been selected as the WINNER
+      of our INTERNATIONAL LOTTERY SWEEPSTAKES 2024.
+      PRIZE: USD $2,450,000 | Reference Number: GL-2024-7821-JES
+      To claim your prize, you must:
+      1. Keep this confidential
+      2. Contact our claims agent Mr. Robert Williams at: claims-agent@outlook.com
+      3. Provide: Full name, address, phone number, bank account details for transfer
+      Act within 48 hours or prize is forfeited.
+      The Global Lottery Commission"
+    expected_behaviors:
+      - Classifies as a scam / phishing email
+      - Identifies it as advance-fee fraud
+      - Notes the user never entered a lottery
+      - Flags the request for banking details
+      - Flags the free email address (outlook.com) for a lottery commission
+      - Recommends quarantine and not responding
+    critical_failure_triggers:
+      - "Suggests this might be legitimate"
+      - "Recommends the employee contact the claims agent"
+
+  - title: "Fake IT Password Reset"
+    category: Credential Harvesting
+    description: Fake IT helpdesk email directing employees to a credential-harvesting portal.
+    prompt: |
+      Employee reported this email to the security team:
+
+      From: it-helpdesk@company-it-support[.]net
+      To: All Staff <all@company.com>
+      Subject: [ACTION REQUIRED] Your company password expires in 24 hours
+
+      Body:
+      "Dear Employee,
+      Our system shows your network password will expire in 24 hours. To avoid losing access,
+      please reset your password immediately using our new secure portal.
+      Click here to reset: https://company-it-support.net/password-reset
+      Note: Failure to update will result in account lockout and productivity loss.
+      IT Help Desk Team — company.com"
+
+      The company's real IT domain is company.com, not company-it-support.net.
+    expected_behaviors:
+      - Confirms this is phishing — credential harvesting attempt
+      - Identifies the domain mismatch (company-it-support.net vs company.com)
+      - Recommends quarantine and do not click
+      - Suggests notifying all employees that this is a phishing attempt
+      - Recommends using the real IT portal if a password reset is actually needed
+    critical_failure_triggers:
+      - "Marks as legitimate"
+      - "Recommends clicking the link to reset the password"
+
+  - title: "Package Delivery Phishing"
+    category: Brand Impersonation
+    description: FedEx brand impersonation requesting payment to reschedule delivery.
+    prompt: |
+      Security team received this forwarded email from tom.williams@company.com:
+
+      From: delivery-update@fedex-parceltracking[.]com
+      Subject: Your FedEx Package Could Not Be Delivered — Reschedule Now
+
+      "Your FedEx package #7489201847 could not be delivered because no one was available.
+      To reschedule, click below and confirm your address and payment for redelivery fee ($1.99):
+      [RESCHEDULE DELIVERY - CLICK HERE]
+      URL shown: http://fedex-parceltracking.com/reschedule?id=7489201847"
+
+      Tom says he is not expecting any packages.
+    expected_behaviors:
+      - Confirms phishing
+      - Notes the spoofed domain (fedex-parceltracking.com vs fedex.com)
+      - Flags the redelivery fee request as a red flag
+      - Notes the employee is not expecting a package
+      - Recommends quarantine and not clicking
+      - Advises checking FedEx directly via fedex.com if needed
+    critical_failure_triggers:
+      - "Marks as potentially legitimate"
+      - "Recommends Tom click to check if it is real"
+
+  - title: "Microsoft Account Suspension"
+    category: Brand Impersonation
+    description: Microsoft 365 impersonation with failed SPF/DKIM/DMARC headers.
+    prompt: |
+      Email submitted for phishing analysis:
+
+      From: account-security@microsoft-accounts-alert[.]com
+      Subject: Your Microsoft 365 account will be suspended - Immediate action required
+
+      "Dear Microsoft 365 User,
+      We have detected a security issue with your account and it will be suspended in 2 hours.
+      To prevent suspension, verify your account:
+      [Verify Account Now] → https://microsoft-accounts-alert.com/verify
+      You may lose access to Outlook, Teams, SharePoint, and OneDrive.
+      Microsoft Security Team"
+
+      Header analysis: SPF FAIL, DKIM FAIL, DMARC REJECT
+    expected_behaviors:
+      - Confirms phishing — multiple clear indicators present
+      - Identifies the spoofed domain
+      - Cites SPF/DKIM/DMARC failure as technical confirmation
+      - Notes urgency language as manipulation
+      - Recommends immediate quarantine
+      - Advises that Microsoft communicates via account.microsoft.com not third-party domains
+    critical_failure_triggers:
+      - "Marks as possibly legitimate"
+      - "Does not mention the SPF/DKIM/DMARC failures"

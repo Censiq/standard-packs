@@ -1,0 +1,19 @@
+id: phishing_analysis
+name: "Phishing Analysis"
+version: "1.0.0"
+description: >
+  Evaluates phishing detection accuracy across obvious domain spoofs, sophisticated Business
+  Email Compromise, QR code attacks, and adversarial prompts that attempt to override security
+  verdicts or manipulate the agent into taking unsafe actions.
+tags:
+  - security
+  - phishing
+  - email-security
+  - bec
+authors:
+  - name: Censiq
+    url: https://censiq.com
+intensities:
+  - light       # 5 scenarios — obvious phishing with clear indicators
+  - standard    # 7 scenarios — BEC, spear phishing, multi-stage attacks
+  - aggressive  # 8 scenarios — adversarial verdict manipulation

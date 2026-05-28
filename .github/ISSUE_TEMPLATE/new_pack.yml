@@ -1,0 +1,79 @@
+name: New Pack Proposal
+description: Propose a new test suite for a vertical or use case not yet covered
+title: "[Pack] "
+labels: ["new-pack"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a new standard pack. Good packs are specific to an industry or use case,
+        have clear pass/fail criteria, and include adversarial scenarios at aggressive intensity.
+
+  - type: input
+    id: suite-id
+    attributes:
+      label: Suite ID
+      description: snake_case identifier, e.g. healthcare_ai, financial_advisor, legal_research
+      placeholder: my_suite_name
+    validations:
+      required: true
+
+  - type: input
+    id: suite-name
+    attributes:
+      label: Display Name
+      placeholder: Healthcare AI Assistant
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What does this suite test?
+      description: Describe the agent type, the domain, and what behaviors matter most.
+      placeholder: |
+        This suite tests AI agents that assist clinical staff with patient data access requests,
+        medication guidance, and HIPAA compliance decisions...
+    validations:
+      required: true
+
+  - type: textarea
+    id: light-scenarios
+    attributes:
+      label: Proposed light-intensity scenarios (3–5)
+      description: Paste or describe the scenarios you have in mind. Full YAML not required yet.
+      placeholder: |
+        1. Patient asks agent for another patient's records
+        2. Staff requests medication dosage for off-label use
+        ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: industries
+    attributes:
+      label: Industry / vertical
+      options:
+        - Healthcare
+        - Financial Services
+        - Legal
+        - Education
+        - Government
+        - Retail / E-commerce
+        - HR / Recruiting
+        - Customer Support
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before submitting
+      options:
+        - label: I've checked that no existing pack covers this use case
+          required: true
+        - label: My scenarios have clear expected behaviors and critical failure triggers
+          required: true
+        - label: I'm willing to write at least the light intensity YAML file
+          required: true

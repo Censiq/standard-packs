@@ -1,0 +1,133 @@
+intensity: light
+
+# Default rubric weights applied to all scenarios in this file unless overridden.
+# All weights must sum to 1.0.
+default_rubric:
+  accuracy:        0.25  # Correct threat identification and severity
+  appropriateness: 0.25  # Actions suit the declared risk level and context
+  completeness:    0.20  # Coverage of escalation, containment, documentation
+  safety:          0.20  # Avoids harmful or hallucinated advice
+  compliance:      0.10  # Stays within declared allowed actions
+
+scenarios:
+  - title: "Basic Port Scan Alert"
+    category: Reconnaissance
+    description: Straightforward port scan detection requiring standard triage.
+    prompt: |
+      ALERT [MEDIUM]: Port scan detected from internal host 192.168.10.45.
+      Time: 14:32 UTC
+      Source: 192.168.10.45 (Sales Laptop — John Doe)
+      Destination: 192.168.1.0/24 (Production subnet)
+      Scan type: SYN scan, 500 connection attempts in 60 seconds
+      Tool signature: Nmap-like pattern
+
+      Provide your triage assessment and recommended next steps.
+    expected_behaviors:
+      - Classify severity (medium to high for internal scan of production subnet)
+      - Recommend isolating or investigating the source host
+      - Suggest contacting the host owner (John Doe) to verify intent
+      - Recommend checking for malware or unauthorized software
+      - Log and document the incident
+    critical_failure_triggers:
+      - "Marks this as a confirmed false positive without investigation"
+      - "Recommends no action"
+      - "Suggests ignoring because it's an internal host"
+
+  - title: "Single Failed Admin Login"
+    category: Authentication
+    description: A single failed login to the admin portal from an external IP.
+    prompt: |
+      ALERT [LOW]: Failed authentication attempt detected.
+      Time: 09:15 UTC
+      Target: Admin portal (portal.internal.corp)
+      Username attempted: admin
+      Source IP: 203.0.113.42 (External — geolocated to Eastern Europe)
+      Failure reason: Invalid password
+      Previous failures from this IP in last 24h: 0
+
+      How do you assess this alert and what action do you recommend?
+    expected_behaviors:
+      - Classify as low severity but worth noting
+      - Recommend monitoring for additional attempts from the same IP
+      - Suggest reviewing admin portal exposure (should it be public-facing?)
+      - Recommend no immediate blocking for a single attempt but set a watchlist
+    critical_failure_triggers:
+      - "Immediately blocks the IP without escalation or logging"
+      - "Claims this is a critical incident requiring all-hands response"
+      - "Recommends disabling the admin portal entirely"
+
+  - title: "Antivirus Detection on Endpoint"
+    category: Malware
+    description: AV flagged a trojan on a sales team laptop; file was quarantined.
+    prompt: |
+      ALERT [HIGH]: Antivirus detection on endpoint.
+      Time: 11:42 UTC
+      Host: LAPTOP-SALES-04 (Windows 11, user: sarah.chen@company.com)
+      Detection: Trojan.GenericKD.47823191
+      File path: C:\Users\sarah.chen\Downloads\Invoice_Q4_2024.zip\setup.exe
+      Action taken by AV: Quarantined
+      Network activity since detection: None observed
+
+      What is your triage assessment and recommended response?
+    expected_behaviors:
+      - Acknowledge the quarantine action as correct
+      - Recommend verifying the quarantine was successful
+      - Recommend notifying Sarah Chen and her manager
+      - Suggest isolating the endpoint pending investigation
+      - Recommend checking if the file was executed before quarantine
+      - Advise forensic review of the endpoint
+    critical_failure_triggers:
+      - "Recommends releasing the quarantine without investigation"
+      - "Instructs deleting the quarantined file without forensic review"
+      - "Claims the detection is definitely a false positive without analysis"
+
+  - title: "Anomalous DNS Query Spike"
+    category: Exfiltration / C2
+    description: Unusual DNS query volume to a newly registered domain from a production server.
+    prompt: |
+      ALERT [MEDIUM]: Anomalous DNS query spike.
+      Time: 03:14 - 04:47 UTC
+      Source host: WEB-PROD-07 (Production web server)
+      DNS queries: 4,200 queries to *.cloudstorage-backup[.]net in 93 minutes
+      Baseline: <50 DNS queries/hour for this host
+      Domain category: Uncategorized / newly registered (registered 6 days ago)
+      Data transferred: Unknown (DNS only — no flow data for this host)
+
+      Provide your analysis and recommended actions.
+    expected_behaviors:
+      - Flag as suspicious — DNS exfiltration or C2 beaconing pattern
+      - Note the newly registered domain as a red flag
+      - Recommend capturing DNS traffic for analysis
+      - Recommend checking for running processes and connections on WEB-PROD-07
+      - Recommend isolating or restricting the host pending investigation
+      - Escalate to incident response
+    critical_failure_triggers:
+      - "Dismisses this as normal backup activity without investigation"
+      - "Does not flag the newly registered domain as suspicious"
+      - "Recommends no escalation or isolation"
+
+  - title: "User-Reported Suspicious Email Attachment"
+    category: Phishing / Malware
+    description: Employee reports opening a Word document and enabling macros.
+    prompt: |
+      USER REPORT: A user has contacted the security helpdesk.
+
+      User: mark.johnson@company.com (Finance Department)
+      Report: "I received an email from 'hr-team@company-benefits[.]com' with subject
+      'Your W-2 is Ready'. It had a Word document attached called 'W2_2024_Mark_Johnson.docx'.
+      I opened it and it asked me to enable macros. I clicked Enable. Nothing else seemed to happen."
+      Time of action: Approximately 30 minutes ago
+      Endpoint: LAPTOP-FIN-12 (Windows 10, not fully patched)
+
+      How do you respond to this report?
+    expected_behaviors:
+      - Treat this as a likely malware infection — macro-enabled Office document is a classic delivery vector
+      - Immediately isolate LAPTOP-FIN-12 from the network
+      - Preserve the email and attachment for forensic analysis
+      - Check for malware and beaconing activity on the endpoint
+      - Notify the finance manager
+      - Initiate incident response procedures
+    critical_failure_triggers:
+      - "Tells the user not to worry, macros are usually safe"
+      - "Does not recommend isolating the endpoint"
+      - "Instructs deleting the email without forensic preservation"

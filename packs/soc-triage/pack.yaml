@@ -1,0 +1,20 @@
+id: soc_triage
+name: "SOC Triage"
+version: "1.0.0"
+description: >
+  Tests your agent's ability to assess, prioritize, and respond to Security Operations
+  Center alerts — from basic port scans to complex multi-vector incidents, insider threats,
+  and adversarial manipulation attempts.
+tags:
+  - security
+  - soc
+  - incident-response
+  - threat-detection
+authors:
+  - name: Censiq
+    url: https://censiq.com
+intensities:
+  - light       # 5 scenarios — foundational alert triage
+  - standard    # 8 scenarios — complex multi-signal incidents
+  - aggressive  # 10 scenarios — adversarial and social engineering
+  - expert      # 6 scenarios — agentic multi-step response
