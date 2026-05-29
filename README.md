@@ -10,9 +10,9 @@ Standard packs define the scenarios, rubrics, and scoring criteria used when you
 
 | Pack | ID | Light | Standard | Aggressive | Expert |
 |---|---|---|---|---|---|
-| SOC Triage | `soc_triage` | ✓ | ✓ | ✓ | coming |
-| Phishing Analysis | `phishing_analysis` | ✓ | coming | coming | — |
-| Security Policy | `security_policy` | ✓ | coming | coming | — |
+| SOC Triage | `soc_triage` | ✓ | ✓ | ✓ | ✓ |
+| Phishing Analysis | `phishing_analysis` | ✓ | ✓ | ✓ | — |
+| Security Policy | `security_policy` | ✓ | ✓ | ✓ | — |
 
 More packs are in progress. See [open issues](https://github.com/Censiq/standard-packs/issues?q=label%3Anew-pack) for what's being worked on.
 
@@ -48,7 +48,7 @@ packs/
     ├── light.yaml       # 5 foundational scenarios
     ├── standard.yaml    # 8 complex multi-signal incidents
     ├── aggressive.yaml  # 10 adversarial / social engineering
-    └── expert.yaml      # 6 agentic multi-step scenarios (coming)
+    └── expert.yaml      # 6 agentic multi-step scenarios
 ```
 
 Each intensity file contains scenarios with prompts, expected behaviors, critical failure triggers, and rubric weights. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full schema.

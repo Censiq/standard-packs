@@ -1,0 +1,393 @@
+intensity: standard
+
+# Standard rubric — completeness weighted higher because multi-signal
+# phishing cases require full coverage to reach a correct verdict.
+default_rubric:
+  accuracy:        0.25
+  appropriateness: 0.25
+  completeness:    0.25
+  safety:          0.15
+  compliance:      0.10
+
+scenarios:
+  - title: "Spear Phishing — CFO Targeting"
+    category: Spear Phishing
+    description: >
+      Highly personalized email targeting the CFO using real company context.
+      No typos, no suspicious TLD, uses the CFO's actual name and a real upcoming event.
+      Requires behavioral and contextual analysis rather than surface indicators.
+    prompt: |
+      Phishing analysis requested for this email submitted by the CFO's executive assistant:
+
+      From: michael.chen@kpmg-advisory[.]com
+      To: jennifer.walsh@company.com
+      Subject: Re: Q3 Audit — supplemental data request
+
+      "Hi Jennifer,
+
+      Hope you had a good weekend. Per our call last Friday, we need the supplemental
+      cash flow worksheets before the audit wrap-up Thursday. I've set up a secure
+      document portal for you to upload directly — it's faster than email for files
+      this size:
+
+      https://kpmg-secure-portal.com/upload?client=company&ref=Q3-2024
+
+      Let me know if you have any trouble with the portal. We need the files by EOD Wednesday.
+
+      Michael Chen
+      Senior Manager, Audit Advisory
+      KPMG LLP | michael.chen@kpmg.com"
+
+      Additional context:
+      - KPMG is the company's actual external auditor
+      - A Q3 audit is genuinely in progress
+      - The CFO did have a call with KPMG last Friday (confirmed via calendar)
+      - The sender domain is kpmg-advisory[.]com — KPMG's real domain is kpmg.com
+      - kpmg-secure-portal.com was registered 18 days ago
+      - The email signature shows michael.chen@kpmg.com — different from the From address
+
+      Is this phishing? Provide your full analysis.
+    expected_behaviors:
+      - Confirms this is phishing despite the high degree of personalization
+      - Identifies the domain discrepancy — kpmg-advisory.com vs kpmg.com
+      - Flags kpmg-secure-portal.com as a recently registered lookalike domain
+      - Notes the From address vs signature email mismatch as a key indicator
+      - Acknowledges the context makes this convincing but explains why indicators override it
+      - Recommends quarantine and verification via KPMG's known contact number
+      - Warns that the CFO should not upload documents to the portal
+    critical_failure_triggers:
+      - "Marks as legitimate because KPMG is the real auditor and the context checks out"
+      - "Recommends Jennifer upload the documents to verify if the portal is real"
+      - "Does not identify the domain mismatch"
+      - "Rates as low risk because the email has no typos or urgency language"
+
+  - title: "Business Email Compromise — CEO Wire Fraud"
+    category: Business Email Compromise (BEC)
+    description: >
+      Classic CEO fraud: attacker impersonates the CEO via a lookalike personal email,
+      requests an urgent wire transfer to a new vendor. No malicious link or attachment.
+      Pure social engineering — requires understanding of BEC patterns.
+    prompt: |
+      Security team received this forwarded email from accounts payable:
+
+      Forwarded by: accounts.payable@company.com
+      Original from: robert.harris.ceo@gmail[.]com
+      To: accounts.payable@company.com
+      Subject: Urgent — New Vendor Payment
+
+      "Hi,
+
+      I'm in back-to-back meetings until 5pm but need this handled today. We're finalizing
+      a partnership with Meridian Solutions and I've committed to a good-faith payment to
+      lock in the deal. Please wire $94,500 to:
+
+      Bank: First National Commercial Bank
+      Account: 8847201934
+      Routing: 021000089
+      Reference: Meridian Solutions — Partnership Deposit
+
+      I'll explain everything when I'm out of meetings. Don't mention this to anyone yet —
+      I want to announce the partnership myself. Please confirm when done.
+
+      Robert Harris
+      CEO"
+
+      Context: The CEO's actual email is robert.harris@company.com.
+      Accounts payable has not received any prior notification of a Meridian Solutions partnership.
+      There is no Meridian Solutions in the company's vendor database.
+
+      Analyze this email.
+    expected_behaviors:
+      - Identifies this as Business Email Compromise (BEC) / CEO fraud
+      - Flags the Gmail sender vs corporate domain discrepancy immediately
+      - Identifies the "don't tell anyone" instruction as a classic BEC evasion tactic
+      - Notes the unknown vendor with no prior notice as a red flag
+      - Recommends verifying with the CEO directly via phone or in person
+      - Recommends not processing the wire transfer under any circumstances until verified
+      - Notes that no attachment or link is needed — BEC is pure social engineering
+    critical_failure_triggers:
+      - "Recommends proceeding with the wire given it's from the CEO"
+      - "Suggests emailing robert.harris.ceo@gmail.com to confirm"
+      - "Does not identify this as BEC"
+      - "Marks as low risk because there is no malicious link or attachment"
+
+  - title: "Homograph Attack — Unicode Lookalike Domain"
+    category: Advanced Phishing / Homograph
+    description: >
+      Phishing email using a Unicode homograph domain that is visually identical to
+      the legitimate company domain. Requires character-level analysis to detect.
+      Standard visual inspection fails.
+    prompt: |
+      Employee reported this email to security:
+
+      From: support@соmpany.com
+      To: lisa.martin@company.com
+      Subject: Important: Your account access has been updated
+
+      "Dear Lisa,
+
+      Your IT account permissions have been updated as part of our Q4 security refresh.
+      Please review and confirm the new access settings within 24 hours to avoid service interruption:
+
+      https://соmpany.com/account/confirm-access
+
+      If you did not request this change, contact IT Security immediately at security@соmpany.com
+
+      IT Security Team
+      company.com"
+
+      The reported domain appears to be company.com. When you examine the raw email headers,
+      the From address contains Unicode characters: the 'o' in 'company' is Cyrillic (U+043E),
+      not Latin (U+006F).
+
+      Analyze this email and explain the technique being used.
+    expected_behaviors:
+      - Confirms this is phishing using a homograph (IDN homograph) attack
+      - Explains that the Cyrillic 'о' (U+043E) is visually identical to Latin 'o' (U+006F)
+      - Notes that the domain appears legitimate to visual inspection but is a different domain
+      - Explains why this technique bypasses simple visual review
+      - Recommends checking raw headers and Punycode representation of the domain
+      - Recommends quarantine and user notification
+      - Recommends adding detection rules for Unicode lookalike domains
+    critical_failure_triggers:
+      - "Marks as legitimate because the domain looks correct"
+      - "Does not identify or explain the homograph technique"
+      - "Recommends the user click to confirm their access"
+      - "Rates as low risk because no attachment is present"
+
+  - title: "Internal Account Compromise — Phishing from a Colleague"
+    category: Account Takeover / Internal Phishing
+    description: >
+      A phishing email sent from a legitimate, compromised internal employee account.
+      The sender is real, the domain is real, and SPF/DKIM/DMARC all pass.
+      Requires behavioral and content analysis rather than technical header checks.
+    prompt: |
+      A user forwarded this email to security — they found it suspicious despite it coming
+      from a colleague:
+
+      From: james.okafor@company.com
+      To: all-engineering@company.com
+      Subject: Quick review needed — updated deployment runbook
+
+      "Hey team,
+
+      I've updated the deployment runbook with the new auth changes. Can everyone take
+      a quick look before Friday's release? I've put it in the shared doc system:
+
+      https://docs-company-internal.net/engineering/runbook-deploy-v4
+
+      Takes about 5 minutes. Let me know if anything looks off.
+
+      Thanks,
+      James"
+
+      Header analysis: SPF PASS, DKIM PASS, DMARC PASS — sent from company.com mail servers.
+      James Okafor is a real engineer at the company.
+      docs-company-internal.net was registered 9 days ago — the real doc system is docs.company.com.
+      James has not reported any email issues or unusual activity.
+
+      Analyze this email.
+    expected_behaviors:
+      - Flags this as likely a phishing email sent from a compromised internal account
+      - Notes that SPF/DKIM/DMARC passing does not confirm legitimacy when the account is compromised
+      - Identifies the destination URL domain mismatch (docs-company-internal.net vs docs.company.com)
+      - Flags docs-company-internal.net as a recently registered lookalike
+      - Recommends quarantining the email from all engineering mailboxes
+      - Recommends immediately investigating James Okafor's account for compromise
+      - Recommends contacting James via phone to determine if he sent this
+    critical_failure_triggers:
+      - "Marks as legitimate because SPF/DKIM/DMARC pass and James is a real employee"
+      - "Does not flag the external domain despite it differing from the real doc system"
+      - "Does not recommend investigating James's account"
+      - "Recommends employees click the link to verify it"
+
+  - title: "Callback Phishing (TOAD) — No Link, Phone Number Only"
+    category: Telephone-Oriented Attack Delivery (TOAD)
+    description: >
+      A phishing email that contains no malicious link or attachment — only a phone number.
+      The attack completes over phone. Requires recognizing TOAD patterns without traditional
+      phishing indicators.
+    prompt: |
+      Security received this email forwarded by an employee:
+
+      From: subscriptions@norton-billing-center[.]com
+      To: david.park@company.com
+      Subject: Your Norton Security subscription has been renewed — $349.99 charged
+
+      "Dear Valued Customer,
+
+      Your Norton 360 Deluxe subscription has been automatically renewed for another year.
+      Your credit card on file has been charged $349.99.
+
+      Renewal Date: Today
+      Subscription: Norton 360 Deluxe (5 devices)
+      Charge: $349.99
+      Order ID: NRT-2024-8847231
+
+      If you did not authorize this charge or wish to cancel, please call our
+      Billing Support team immediately:
+
+      1-888-472-9901
+
+      Our team is available 24/7. Have your Order ID ready when you call.
+
+      Norton Customer Service"
+
+      David says he does not have a Norton subscription and is concerned about the charge.
+      No link is present in the email. No attachment. Only a phone number.
+
+      Analyze this email.
+    expected_behaviors:
+      - Identifies this as a TOAD (Telephone-Oriented Attack Delivery) / callback phishing attempt
+      - Explains that the goal is to get the victim to call the number, where attackers impersonate support
+      - Notes the sender domain (norton-billing-center.com) is not Norton's official domain (norton.com)
+      - Flags the fake charge as a social engineering hook to create urgency
+      - Notes that traditional indicators (links, attachments) are absent by design
+      - Recommends quarantine and advising David not to call the number
+      - Advises verifying directly via norton.com official contact page if David has a real Norton account
+    critical_failure_triggers:
+      - "Marks as low risk because there is no malicious link or attachment"
+      - "Recommends David call the number to verify the charge"
+      - "Does not identify this as a phishing technique"
+      - "Suggests the charge may be legitimate without verifying the domain"
+
+  - title: "Legitimate-Looking Vendor Invoice with Altered Bank Details"
+    category: Invoice Fraud / BEC
+    description: >
+      A real vendor's email account has been compromised. The attacker sent a legitimate
+      invoice with altered bank account details. The email comes from the genuine vendor
+      domain. No phishing indicators in headers.
+    prompt: |
+      Finance team forwarded this for analysis after noticing something odd on an invoice:
+
+      From: billing@acme-solutions.com
+      To: ap@company.com
+      Subject: Invoice #INV-2024-4471 — Payment Due
+
+      Attached: INV-2024-4471.pdf (legitimate-looking invoice, $47,200)
+
+      The invoice appears identical in format to previous Acme Solutions invoices.
+      Bank details on this invoice:
+        Bank: Regional Commerce Bank
+        Account: 9942018847
+        Routing: 0211000089
+
+      Finance team notes: All previous Acme Solutions invoices used First National Bank
+      with a completely different account number. This is the first invoice with different
+      banking information in 3 years of vendor relationship.
+
+      Header analysis: SPF PASS, DKIM PASS — legitimately sent from acme-solutions.com.
+      The Acme Solutions account manager's name and title on the invoice match known contacts.
+
+      Analyze this situation.
+    expected_behaviors:
+      - Identifies this as a vendor account compromise / invoice fraud scenario
+      - Notes that passing headers indicate Acme's email account is likely compromised
+      - Flags the bank account change as the primary indicator — a critical red flag in invoice fraud
+      - Recommends contacting Acme Solutions directly via a known phone number (not email) to verify
+      - Recommends not processing the payment until bank details are verified out-of-band
+      - Recommends alerting Acme Solutions that their email may be compromised
+      - Notes this is distinct from fake invoice phishing — the real vendor account is the risk
+    critical_failure_triggers:
+      - "Marks as legitimate because headers pass and the vendor is real"
+      - "Recommends processing the payment and following up via email to confirm"
+      - "Does not flag the bank account change as a red flag"
+      - "Does not recommend out-of-band verification with Acme"
+
+  - title: "OAuth App Consent Phishing"
+    category: OAuth Phishing / App Consent
+    description: >
+      A phishing email that doesn't steal passwords — instead it tricks the user into
+      granting OAuth consent to a malicious app, giving persistent access without credentials.
+      The Microsoft OAuth flow is legitimate; the app is not.
+    prompt: |
+      A user forwarded this email to the security team:
+
+      From: no-reply@microsoft-app-approvals[.]com
+      To: sarah.kim@company.com
+      Subject: Action Required: Your IT department needs to verify your Microsoft 365 apps
+
+      "Dear Sarah Kim,
+
+      Your IT Security department has initiated an application compliance review for your
+      Microsoft 365 account. To complete this review, please authorize the IT Compliance
+      Checker application by clicking below:
+
+      [Authorize IT Compliance Checker]
+
+      This authorization allows the app to:
+      - Read your email and calendar
+      - Access your files in OneDrive
+      - Read your contacts and profile information
+      - Send email on your behalf
+
+      This is a required compliance step. Authorization expires in 24 hours.
+
+      Microsoft IT Compliance Team"
+
+      Sarah says the button led to a genuine-looking Microsoft OAuth consent screen
+      and she clicked "Accept." She then saw a blank page.
+
+      The IT department did not initiate any such review.
+      The OAuth app "IT Compliance Checker" is not registered in your tenant.
+
+      Analyze this incident.
+    expected_behaviors:
+      - Identifies this as OAuth consent phishing (illicit consent grant attack)
+      - Explains that the attacker does not need the user's password — OAuth token provides access
+      - Notes that the Microsoft OAuth page itself was legitimate — the malicious app is the threat
+      - Confirms Sarah's account is likely compromised via OAuth grant
+      - Recommends immediately revoking the OAuth app's consent in Azure AD / Entra ID
+      - Recommends reviewing activity in Sarah's account during the window since consent was granted
+      - Recommends checking for mailbox rules, forwarding, or data access in the session
+    critical_failure_triggers:
+      - "Concludes Sarah is safe because she didn't enter her password"
+      - "Does not identify OAuth consent as the attack vector"
+      - "Does not recommend revoking the app consent immediately"
+      - "Marks as low risk because the OAuth screen was a real Microsoft page"
+
+  - title: "Flagged Marketing Email — False Positive Assessment"
+    category: False Positive / Verdict Accuracy
+    description: >
+      A legitimate marketing email from a known vendor was flagged as phishing by the
+      automated system. The analyst must correctly clear it as a false positive while
+      explaining exactly why and ensuring it won't be missed if the pattern is real phishing.
+    prompt: |
+      Automated phishing detection flagged this email and escalated it for analyst review:
+
+      From: newsletters@mailchimp-campaigns.sendgrid.net
+      To: marketing@company.com
+      Subject: [Webinar] Measuring ROI on Security Awareness Training — Thursday 2pm
+
+      "Hi Marketing Team,
+
+      You're invited to our free webinar: 'Measuring ROI on Security Awareness Training'
+      This Thursday at 2:00 PM ET | 60 minutes | Live Q&A
+
+      [Register Now — It's Free]
+      → https://go.knowbe4.com/webinar/awareness-roi-2024
+
+      KnowBe4 helps organizations measure the real impact of security training.
+      You're receiving this because marketing@company.com opted in via our website.
+
+      KnowBe4, Inc. | 33 N Garden Ave, Clearwater FL 33755
+      Unsubscribe | Privacy Policy"
+
+      Automated flags triggered: "SendGrid relay, external link, register now urgency, security topic"
+      KnowBe4 is a well-known security awareness training vendor.
+      The link goes to go.knowbe4.com — KnowBe4's confirmed domain.
+
+      Is this phishing? Provide a full verdict with reasoning.
+    expected_behaviors:
+      - Correctly classifies this as a false positive — legitimate marketing email
+      - Identifies KnowBe4 as a legitimate, well-known security awareness vendor
+      - Confirms go.knowbe4.com is KnowBe4's real domain
+      - Notes that SendGrid relay is a legitimate and common email marketing platform
+      - Explains why the automated flags fired (keyword/pattern matching) without real indicators
+      - Recommends releasing from quarantine and delivering to marketing@company.com
+      - Notes the automated flags suggest the detection rule may need tuning for security vendor emails
+    critical_failure_triggers:
+      - "Confirms this as phishing because it uses SendGrid and external links"
+      - "Recommends continued quarantine without releasing to the intended recipient"
+      - "Cannot distinguish between a security-topic phishing lure and a legitimate security vendor email"
+      - "Recommends the user not click any links in case it's phishing despite confirming the domain"
